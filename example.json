@@ -1,0 +1,91 @@
+{
+  "preisProBallen": 60.00,
+  "anfahrtKosten": 20.00,
+  "verteilung": {
+    "Stallgasse": 6,
+    "Paddock A": 1,
+    "Paddock B": 1,
+    "Paddock C": 1,
+    "Paddock D": 1
+  },
+  "nachverrechnung": {
+    "menge": 2,
+    "preis": 60.00
+  },
+  "besitzer": [
+    {
+      "name": "Besitzer 1",
+      "pferde": [
+        { "name": "Pferd A", "stallgasse": true, "paddock": "Paddock A" },
+        { "name": "Pferd B", "stallgasse": true, "paddock": "Paddock A" }
+      ]
+    },
+    {
+      "name": "Besitzer 2",
+      "pferde": [
+        { "name": "Pferd C", "stallgasse": true, "paddock": "Paddock A" }
+      ]
+    },
+    {
+      "name": "Besitzer 3",
+      "pferde": [
+        { "name": "Pferd D", "stallgasse": true, "paddock": "Paddock B" }
+      ]
+    },
+    {
+      "name": "Besitzer 4",
+      "pferde": [
+        { "name": "Pferd E", "stallgasse": true, "paddock": "Paddock B" },
+        { "name": "Pferd F", "stallgasse": true, "paddock": "Paddock B" }
+      ]
+    },
+    {
+      "name": "Besitzer 5",
+      "pferde": [
+        { "name": "Pferd G", "stallgasse": true, "paddock": "Paddock B" }
+      ]
+    },
+    {
+      "name": "Besitzer 6",
+      "pferde": [
+        { "name": "Pferd H", "stallgasse": true, "paddock": "Paddock C" }
+      ]
+    },
+    {
+      "name": "Besitzer 7",
+      "pferde": [
+        { "name": "Pferd I", "stallgasse": true, "paddock": "Paddock C" }
+      ]
+    },
+    {
+      "name": "Besitzer 8",
+      "pferde": [
+        { "name": "Pferd J", "stallgasse": true, "paddock": "Paddock C" }
+      ]
+    },
+    {
+      "name": "Besitzer 9",
+      "pferde": [
+        { "name": "Pferd K", "stallgasse": false, "paddock": "Paddock D" }
+      ]
+    },
+    {
+      "name": "Besitzer 10",
+      "pferde": [
+        { "name": "Pferd L", "stallgasse": false, "paddock": "Paddock D" }
+      ]
+    },
+    {
+      "name": "Besitzer 11",
+      "pferde": [
+        { "name": "Pferd M", "stallgasse": false, "paddock": "Paddock D" }
+      ]
+    },
+    {
+      "name": "Besitzer 12",
+      "pferde": [
+        { "name": "Pferd N", "stallgasse": true, "paddock": "Paddock D" }
+      ]
+    }
+  ]
+}

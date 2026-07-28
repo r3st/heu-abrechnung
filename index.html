@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heu Abrechnung</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        h1, h2, h3 { color: #2c3e50; }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        input[type="file"] {
+            display: block;
+            margin-bottom: 20px;
+            font-size: 16px;
+            width: 100%;
+        }
+        
+        .setting-group { margin-bottom: 12px; }
+        .setting-group label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .setting-group input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            box-sizing: border-box;
+            background: white;
+        }
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        @media (min-width: 600px) {
+            .settings-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        .horse-checkbox-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        @media (min-width: 600px) {
+            .horse-checkbox-list { grid-template-columns: 1fr 1fr; }
+        }
+        .horse-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            background: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+        .horse-checkbox-item input {
+            width: 18px;
+            height: 18px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 280px;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+            resize: vertical;
+        }
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-bottom: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 700px;
+        }
+        th, td {
+            border-bottom: 1px solid #ddd;
+            border-right: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            background-color: #2c3e50;
+            color: white;
+            white-space: nowrap;
+        }
+        tr:last-child td { border-bottom: none; }
+        td:last-child, th:last-child { border-right: none; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        
+        .btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            transition: background-color 0.2s ease;
+        }
+        .btn:hover { background-color: #219150; }
+        .btn-blue { background-color: #3498db; }
+        .btn-blue:hover { background-color: #2980b9; }
+        .empty-state { color: #7f8c8d; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <h1>🌾 Heu Abrechnung</h1>
+
+    <div class="card">
+        <label for="fileInput" style="font-weight:bold; margin-bottom: 5px; display:block;">JSON Datei hochladen:</label>
+        <input type="file" id="fileInput" accept=".json">
+    </div>
+
+    <div class="card" id="settingsCard" style="display: none;">
+        <h2>⚙️ Einstellungen anpassen</h2>
+        
+        <div class="settings-grid" style="margin-bottom: 20px;">
+            <div class="setting-group">
+                <label for="edit_preis">Preis aktueller Ballen (€):</label>
+                <input type="number" step="0.50" id="edit_preis">
+            </div>
+            <div class="setting-group">
+                <label for="edit_anfahrt">Anfahrt gesamt (€):</label>
+                <input type="number" step="1.00" id="edit_anfahrt">
+            </div>
+        </div>
+        
+        <h3 style="font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 15px;">Ballen Verteilung (Aktuell)</h3>
+        <div class="settings-grid" id="settingsContainer" style="margin-bottom: 20px;"></div>
+
+        <h3 style="font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px;">🔄 Nachverrechnung Alt-Heu</h3>
+        <div class="settings-grid" style="margin-bottom: 15px;">
+            <div class="setting-group">
+                <label for="edit_alt_mengen">Anzahl alte Ballen:</label>
+                <input type="number" step="1" id="edit_alt_mengen" value="0">
+            </div>
+            <div class="setting-group">
+                <label for="edit_alt_preis">Preis pro altem Ballen (€):</label>
+                <input type="number" step="0.50" id="edit_alt_preis" value="60">
+            </div>
+        </div>
+
+        <div class="setting-group">
+            <label>Wer sind die NEUEN Pferde? (Haken setzen für Nachverrechnung):</label>
+            <div class="horse-checkbox-list" id="horseCheckboxesContainer"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>💬 Text für WhatsApp / Chat</h2>
+        <textarea id="chatOutput" readonly placeholder="Lade eine Datei hoch, um das Ergebnis zu sehen..."></textarea>
+        <button id="copyChatBtn" class="btn btn-blue" style="display: none; margin-top: 15px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            Text kopieren
+        </button>
+    </div>
+
+    <div class="card">
+        <h2>📊 Übersicht & CSV Export</h2>
+        <div class="table-responsive" id="tableContainer">
+            <div style="padding: 10px;" class="empty-state">Lade eine Datei hoch, um die Tabelle zu sehen...</div>
+        </div>
+        <button id="downloadCsvBtn" class="btn" style="display: none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            CSV Herunterladen
+        </button>
+    </div>
+
+    <script>
+        let currentData = null;
+
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    currentData = JSON.parse(e.target.result);
+                    renderSettings();
+                    berechne(currentData);
+                } catch (error) {
+                    alert("Fehler beim Lesen der JSON-Datei. Ist das Format gültig?");
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function renderSettings() {
+            if (!currentData) return;
+
+            const card = document.getElementById('settingsCard');
+            const container = document.getElementById('settingsContainer');
+            
+            document.getElementById('edit_preis').value = currentData.preisProBallen;
+            document.getElementById('edit_preis').oninput = triggerLiveCalc;
+
+            document.getElementById('edit_anfahrt').value = currentData.anfahrtKosten;
+            document.getElementById('edit_anfahrt').oninput = triggerLiveCalc;
+
+            if (currentData.nachverrechnung === undefined) {
+                currentData.nachverrechnung = { menge: 0, preis: 60 };
+            }
+
+            document.getElementById('edit_alt_mengen').value = currentData.nachverrechnung.menge;
+            document.getElementById('edit_alt_preis').value = currentData.nachverrechnung.preis;
+
+            document.getElementById('edit_alt_mengen').oninput = triggerLiveCalc;
+            document.getElementById('edit_alt_preis').oninput = triggerLiveCalc;
+
+            let html = '';
+            for (const [ort, ballen] of Object.entries(currentData.verteilung)) {
+                const safeId = "edit_ort_" + ort.replace(/\s+/g, '_'); 
+                html += `
+                    <div class="setting-group">
+                        <label for="${safeId}">${ort} (Anzahl):</label>
+                        <input type="number" step="1" id="${safeId}" data-ort="${ort}" value="${ballen}">
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+
+            const horseContainer = document.getElementById('horseCheckboxesContainer');
+            let horseHtml = '';
+            currentData.besitzer.forEach((besitzer, bIndex) => {
+                besitzer.pferde.forEach((pferd, pIndex) => {
+                    if (pferd.stallgasse) {
+                        const isChecked = pferd.neu ? 'checked' : '';
+                        horseHtml += `
+                            <label class="horse-checkbox-item">
+                                <input type="checkbox" class="horse-neu-checkbox" data-bindex="${bIndex}" data-pindex="${pIndex}" ${isChecked}>
+                                <span><strong>${pferd.name}</strong> <small>(${besitzer.name})</small></span>
+                            </label>
+                        `;
+                    }
+                });
+            });
+            horseContainer.innerHTML = horseHtml;
+            card.style.display = 'block';
+
+            container.querySelectorAll('input[type="number"][data-ort]').forEach(input => {
+                input.addEventListener('input', triggerLiveCalc);
+            });
+            horseContainer.querySelectorAll('.horse-neu-checkbox').forEach(chk => {
+                chk.addEventListener('change', triggerLiveCalc);
+            });
+        }
+
+        function triggerLiveCalc() {
+            if (!currentData) return;
+
+            currentData.preisProBallen = parseFloat(document.getElementById('edit_preis').value) || 0;
+            currentData.anfahrtKosten = parseFloat(document.getElementById('edit_anfahrt').value) || 0;
+            
+            currentData.nachverrechnung = {
+                menge: parseInt(document.getElementById('edit_alt_mengen').value) || 0,
+                preis: parseFloat(document.getElementById('edit_alt_preis').value) || 0
+            };
+
+            document.querySelectorAll('#settingsContainer input[type="number"][data-ort]').forEach(input => {
+                const ort = input.getAttribute('data-ort');
+                currentData.verteilung[ort] = parseInt(input.value) || 0;
+            });
+
+            document.querySelectorAll('.horse-neu-checkbox').forEach(chk => {
+                const bIdx = chk.getAttribute('data-bindex');
+                const pIdx = chk.getAttribute('data-pindex');
+                currentData.besitzer[bIdx].pferde[pIdx].neu = chk.checked;
+            });
+
+            berechne(currentData);
+        }
+
+        document.getElementById('copyChatBtn').addEventListener('click', function() {
+            const text = document.getElementById('chatOutput').value;
+            if (!text) return;
+            const btn = document.getElementById('copyChatBtn');
+            const originalHTML = btn.innerHTML;
+            
+            const showSuccess = () => {
+                btn.innerHTML = 'Kopiert!';
+                btn.style.backgroundColor = '#27ae60';
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.style.backgroundColor = '';
+                }, 2000);
+            };
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(showSuccess).catch(() => fallbackCopy(text, showSuccess));
+            } else {
+                fallbackCopy(text, showSuccess);
+            }
+        });
+
+        function fallbackCopy(text, successCallback) {
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = text;
+            tempTextArea.style.position = "fixed"; 
+            tempTextArea.style.top = "0";
+            tempTextArea.style.left = "-9999px";
+            document.body.appendChild(tempTextArea);
+            tempTextArea.focus();
+            tempTextArea.select();
+            try {
+                if (document.execCommand('copy')) successCallback();
+            } catch (err) { alert('Kopieren fehlgeschlagen.'); }
+            document.body.removeChild(tempTextArea);
+        }
+
+        function berechne(data) {
+            let totalPferde = 0;
+            let stallgassePferdeList = [];
+            let neuePferdeList = [];
+            let altePferdeList = [];
+            const paddockPferdeCount = {};
+
+            data.besitzer.forEach(besitzer => {
+                besitzer.pferde.forEach(pferd => {
+                    totalPferde++;
+                    if (pferd.stallgasse) {
+                        stallgassePferdeList.push({ besitzer: besitzer.name, pferd: pferd.name });
+                        if (pferd.neu) {
+                            neuePferdeList.push({ besitzer: besitzer.name, pferd: pferd.name });
+                        } else {
+                            altePferdeList.push({ besitzer: besitzer.name, pferd: pferd.name });
+                        }
+                    }
+                    if (pferd.paddock) {
+                        paddockPferdeCount[pferd.paddock] = (paddockPferdeCount[pferd.paddock] || 0) + 1;
+                    }
+                });
+            });
+
+            const anfahrtProPferd = totalPferde > 0 ? (data.anfahrtKosten / totalPferde) : 0;
+            const stallgasseKosten = (data.verteilung["Stallgasse"] || 0) * data.preisProBallen;
+            const stallgasseProPferd = stallgassePferdeList.length > 0 ? (stallgasseKosten / stallgassePferdeList.length) : 0;
+
+            const paddockKostenProPferd = {};
+            for (const [paddockName, ballen] of Object.entries(data.verteilung)) {
+                if (paddockName === "Stallgasse") continue;
+                const kosten = ballen * data.preisProBallen;
+                const anzahlPferde = paddockPferdeCount[paddockName] || 0;
+                paddockKostenProPferd[paddockName] = anzahlPferde > 0 ? (kosten / anzahlPferde) : 0;
+            }
+
+            // KORRIGIERTE NACHVERRECHNUNG (ANTEILIGE DIFFERENZ)
+            let altGesamtwert = 0;
+            let anteilAltPferd = 0;
+            let anteilNeuPferd = 0;
+            let diffGutschriftAlt = 0;
+            let diffNachzahlungNeu = 0;
+
+            if (data.nachverrechnung && data.nachverrechnung.menge > 0 && stallgassePferdeList.length > 0) {
+                altGesamtwert = data.nachverrechnung.menge * data.nachverrechnung.preis;
+                
+                const anzahlAltPferde = altePferdeList.length;
+                const anzahlNeuPferde = neuePferdeList.length;
+                const gesamtStallgasseAnzahl = stallgassePferdeList.length; // z.B. 10 (9 alte + 1 neues)
+
+                if (anzahlAltPferde > 0 && anzahlNeuPferde > 0) {
+                    // Wäre es vorher aufgeteilt worden: Gesamtwert / alte Anzahl (z.B. 120 / 9 = 13.33)
+                    anteilAltPferd = altGesamtwert / anzahlAltPferde;
+                    // Wird es jetzt aufgeteilt: Gesamtwert / neue Gesamtzahl (z.B. 120 / 10 = 12.00)
+                    anteilNeuPferd = altGesamtwert / gesamtStallgasseAnzahl;
+
+                    // Die Differenz, die alte gespart haben / neue bezahlen müssen
+                    diffGutschriftAlt = anteilAltPferd - anteilNeuPferd; // z.B. 13.33 - 12.00 = 1.33 Gutschrift
+                    diffNachzahlungNeu = (anteilAltPferd - anteilNeuPferd) * (anzahlAltPferde / anzahlNeuPferde); 
+                    // Alternativ zahlt das neue Pferd den vollen Anteil (anteilNeuPferd) oder trägt den Ausgleich. 
+                    // Exakt nach deiner Logik: Das neue Pferd zahlt seinen Anteil am Alt-Heu, und die alten kriegen die Differenz erlassen.
+                } else if (anzahlAltPferde === 0 && anzahlNeuPferde > 0) {
+                    // Falls nur neue da sind
+                    anteilNeuPferd = altGesamtwert / gesamtStallgasseAnzahl;
+                }
+            }
+
+            let totalBallen = 0;
+            let verteilungText = "";
+            for (const [ort, ballen] of Object.entries(data.verteilung)) {
+                totalBallen += ballen;
+                verteilungText += `  • ${ort}: ${ballen} Ballen\n`;
+            }
+
+            let chatText = `🌾 *Heu-Abrechnung*\n\n`;
+            chatText += `🚚 Anfahrt gesamt: ${data.anfahrtKosten.toFixed(2)}€ (${anfahrtProPferd.toFixed(2)}€ pro Pferd)\n`;
+            chatText += `📦 Ballenpreis (aktuell): ${data.preisProBallen.toFixed(2)}€\n`;
+            chatText += `🌾 Gesamtballen (aktuell): ${totalBallen} Stück\n`;
+            chatText += `📍 Verteilung:\n${verteilungText}\n`;
+
+            if (data.nachverrechnung && data.nachverrechnung.menge > 0) {
+                chatText += `🔄 *Nachverrechnung Alt-Heu (${data.nachverrechnung.menge} Ballen à ${data.nachverrechnung.preis.toFixed(2)}€ = ${altGesamtwert.toFixed(2)}€):*\n`;
+                chatText += `  • Neu aufgeteilt auf ${stallgassePferdeList.length} Pferde (${anteilNeuPferd.toFixed(2)}€ statt vorher ${anteilAltPferd.toFixed(2)}€ pro Alt-Pferd)\n`;
+                chatText += `  • Gutschrift für ${altePferdeList.length} Bestands-Pferd(e): -${diffGutschriftAlt.toFixed(2)}€ p.P.\n`;
+                chatText += `  • Anteil für ${neuePferdeList.length} neue Pferd(e): +${anteilNeuPferd.toFixed(2)}€ p.P.\n\n`;
+            }
+
+            let csvText = `Besitzer;Pferd;Anfahrt (€);Stallgasse (€);Paddock Name;Paddock (€);Alt-Heu Ausgleich (€);Gesamt Pferd (€);Gesamt Besitzer (€)\n`;
+            
+            let tableHTML = `<table>
+                <thead>
+                    <tr>
+                        <th>Besitzer</th>
+                        <th>Pferd</th>
+                        <th>Anfahrt (€)</th>
+                        <th>Stallgasse (€)</th>
+                        <th>Paddock</th>
+                        <th>Paddock (€)</th>
+                        <th>Alt-Heu Ausgleich (€)</th>
+                        <th>Gesamt Pferd (€)</th>
+                        <th>Gesamt Besitzer (€)</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            data.besitzer.forEach(besitzer => {
+                let besitzerTotal = 0;
+                let besitzerChat = `👤 *${besitzer.name}*\n`;
+                let besitzerZeilenDaten = [];
+
+                besitzer.pferde.forEach(pferd => {
+                    let pferdTotal = anfahrtProPferd;
+                    let teile = [`Anfahrt: ${anfahrtProPferd.toFixed(2)}€`];
+                    
+                    let pferdStallKosten = 0;
+                    if (pferd.stallgasse) {
+                        pferdTotal += stallgasseProPferd;
+                        pferdStallKosten = stallgasseProPferd;
+                        teile.push(`Stallgasse: ${stallgasseProPferd.toFixed(2)}€`);
+                    }
+
+                    let pferdAltDiff = 0;
+                    if (pferd.stallgasse && data.nachverrechnung && data.nachverrechnung.menge > 0) {
+                        if (pferd.neu) {
+                            // Neues Pferd zahlt seinen gerechten Anteil am Alt-Heu
+                            pferdAltDiff = anteilNeuPferd;
+                            pferdTotal += pferdAltDiff;
+                            teile.push(`Alt-Heu Anteil: +${pferdAltDiff.toFixed(2)}€`);
+                        } else {
+                            // Altes Pferd bekommt die Ersparnis/Differenz gutgeschrieben
+                            pferdAltDiff = -diffGutschriftAlt;
+                            pferdTotal += pferdAltDiff;
+                            teile.push(`Alt-Heu Gutschrift: -${Math.abs(pferdAltDiff).toFixed(2)}€`);
+                        }
+                    }
+
+                    let pferdPaddockKosten = 0;
+                    if (pferd.paddock && paddockKostenProPferd[pferd.paddock]) {
+                        pferdPaddockKosten = paddockKostenProPferd[pferd.paddock];
+                        pferdTotal += pferdPaddockKosten;
+                        teile.push(`${pferd.paddock}: ${pferdPaddockKosten.toFixed(2)}€`);
+                    }
+
+                    besitzerTotal += pferdTotal;
+                    besitzerChat += `  🐴 ${pferd.name}: ${pferdTotal.toFixed(2)}€ (${teile.join(' + ')})\n`;
+                    
+                    besitzerZeilenDaten.push({
+                        besitzerName: besitzer.name,
+                        pferdName: pferd.name,
+                        anfahrt: anfahrtProPferd.toFixed(2),
+                        stallgasse: pferdStallKosten.toFixed(2),
+                        paddockName: pferd.paddock || '-',
+                        paddockKosten: pferdPaddockKosten.toFixed(2),
+                        altDiff: pferdAltDiff.toFixed(2),
+                        pferdTotal: pferdTotal.toFixed(2)
+                    });
+                });
+
+                besitzerChat = besitzerChat.replace(`\n`, ` -> *Gesamt: ${besitzerTotal.toFixed(2)}€*\n`);
+                chatText += besitzerChat + `\n`;
+
+                besitzerZeilenDaten.forEach((z, index) => {
+                    let istErsteZeile = (index === 0);
+                    let rowSpan = istErsteZeile ? ` rowspan="${besitzerZeilenDaten.length}" style="vertical-align: top; font-weight: bold;"` : '';
+                    let formatBesitzerTotal = istErsteZeile ? besitzerTotal.toFixed(2) : "";
+
+                    csvText += `${z.besitzerName};${z.pferdName};${z.anfahrt};${z.stallgasse};${z.paddockName};${z.paddockKosten};${z.altDiff};${z.pferdTotal};${formatBesitzerTotal}\n`;
+
+                    tableHTML += `<tr>`;
+                    if (istErsteZeile) tableHTML += `<td${rowSpan}>${z.besitzerName}</td>`;
+                    tableHTML += `
+                        <td>${z.pferdName}</td>
+                        <td>${z.anfahrt}</td>
+                        <td>${z.stallgasse}</td>
+                        <td>${z.paddockName}</td>
+                        <td>${z.paddockKosten}</td>
+                        <td>${z.altDiff}</td>
+                        <td><strong>${z.pferdTotal}</strong></td>
+                    `;
+                    if (istErsteZeile) tableHTML += `<td${rowSpan}>${formatBesitzerTotal}</td>`;
+                    tableHTML += `</tr>`;
+                });
+            });
+
+            tableHTML += `</tbody></table>`;
+
+            document.getElementById('chatOutput').value = chatText;
+            document.getElementById('tableContainer').innerHTML = tableHTML;
+            document.getElementById('downloadCsvBtn').style.display = 'flex';
+            document.getElementById('copyChatBtn').style.display = 'flex';
+            
+            const btn = document.getElementById('downloadCsvBtn');
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', function() {
+                const bom = "\uFEFF"; 
+                const blob = new Blob([bom + csvText], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'heubestellung_abrechnung.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+    </script>
+</body>
+</html>
