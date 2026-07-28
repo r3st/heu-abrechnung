@@ -20,11 +20,16 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        input[type="file"] {
+        input[type="file"], input[type="text"], input[type="number"], select {
             display: block;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             font-size: 16px;
             width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            background: white;
         }
         
         .setting-group { margin-bottom: 12px; }
@@ -33,15 +38,6 @@
             display: block;
             margin-bottom: 5px;
             font-size: 14px;
-        }
-        .setting-group input[type="number"] {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            font-size: 16px;
-            box-sizing: border-box;
-            background: white;
         }
         .settings-grid {
             display: grid;
@@ -56,7 +52,7 @@
             display: grid;
             grid-template-columns: 1fr;
             gap: 8px;
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
             border: 1px solid #ddd;
             padding: 10px;
@@ -69,17 +65,47 @@
         .horse-checkbox-item {
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between;
             font-size: 14px;
             background: white;
             padding: 6px 10px;
             border-radius: 6px;
             border: 1px solid #eee;
         }
+        .horse-checkbox-item div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
         .horse-checkbox-item input {
             width: 18px;
             height: 18px;
+            margin: 0;
         }
+        .btn-action-group {
+            display: flex;
+            gap: 5px;
+        }
+        .btn-edit {
+            background: #f39c12;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-edit:hover { background: #d68910; }
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .btn-delete:hover { background: #c0392b; }
 
         textarea {
             width: 100%;
@@ -134,6 +160,7 @@
             gap: 8px;
             width: 100%;
             transition: background-color 0.2s ease;
+            margin-bottom: 10px;
         }
         .btn:hover { background-color: #219150; }
         .btn-blue { background-color: #3498db; }
@@ -146,12 +173,12 @@
     <h1>🌾 Heu Abrechnung</h1>
 
     <div class="card">
-        <label for="fileInput" style="font-weight:bold; margin-bottom: 5px; display:block;">JSON Datei hochladen:</label>
+        <label style="font-weight:bold; margin-bottom: 5px; display:block;">JSON Datei hochladen:</label>
         <input type="file" id="fileInput" accept=".json">
     </div>
 
     <div class="card" id="settingsCard" style="display: none;">
-        <h2>⚙️ Einstellungen anpassen</h2>
+        <h2>⚙️ Einstellungen & Verwaltung</h2>
         
         <div class="settings-grid" style="margin-bottom: 20px;">
             <div class="setting-group">
@@ -179,19 +206,49 @@
             </div>
         </div>
 
+        <h3 style="font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 5px;">🐴 Pferde & Neue-Markierung</h3>
         <div class="setting-group">
-            <label>Wer sind die NEUEN Pferde? (Haken setzen für Nachverrechnung):</label>
+            <label>Pferde-Liste (Haken setzen = Neues Pferd für Alt-Heu Nachverrechnung):</label>
             <div class="horse-checkbox-list" id="horseCheckboxesContainer"></div>
+        </div>
+
+        <!-- FORMULAR FÜR HINZUFÜGEN / BEARBEITEN -->
+        <div style="background: #f1f8e9; padding: 15px; border-radius: 8px; border: 1px solid #c8e6c9; margin-top: 15px;" id="formCard">
+            <h4 style="margin: 0 0 10px 0; color: #2e7d32;" id="formTitle">➕ Neues Pferd hinzufügen</h4>
+            <input type="hidden" id="edit_b_index" value="-1">
+            <input type="hidden" id="edit_p_index" value="-1">
+            
+            <input type="text" id="new_besitzer" placeholder="Besitzer Name (z.B. Besitzer 13)">
+            <input type="text" id="new_pferd" placeholder="Pferd Name (z.B. Pferd O)">
+            
+            <!-- PADDOCK AUSWAHL / NEU ANLEGEN (OHNE STALLGASSE) -->
+            <label for="new_paddock_select" style="font-weight:bold; font-size:14px; margin-bottom:5px; display:block;">Paddock auswählen:</label>
+            <select id="new_paddock_select">
+                <!-- Wird dynamisch gefüllt -->
+            </select>
+            <input type="text" id="new_paddock_custom" placeholder="Namen für neuen Paddock eingeben..." style="display: none;">
+
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; margin-bottom: 15px;">
+                <input type="checkbox" id="new_stallgasse" style="width: 18px; height: 18px; margin:0;" checked> Bezieht Stallgassenheu
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; margin-bottom: 15px;">
+                <input type="checkbox" id="new_is_neu" style="width: 18px; height: 18px; margin:0;"> Ist ein neues Pferd (für Alt-Heu)
+            </label>
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn" style="background-color: #2e7d32; margin: 0;" id="saveHorseBtn">Pferd hinzufügen</button>
+                <button type="button" class="btn" style="background-color: #7f8c8d; margin: 0; display: none;" id="cancelEditBtn">Abbrechen</button>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button type="button" class="btn btn-blue" id="downloadJsonBtn">💾 Aktualisierte JSON Herunterladen</button>
         </div>
     </div>
 
     <div class="card">
         <h2>💬 Text für WhatsApp / Chat</h2>
         <textarea id="chatOutput" readonly placeholder="Lade eine Datei hoch, um das Ergebnis zu sehen..."></textarea>
-        <button id="copyChatBtn" class="btn btn-blue" style="display: none; margin-top: 15px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            Text kopieren
-        </button>
+        <button id="copyChatBtn" class="btn btn-blue" style="display: none; margin-top: 15px;">Text kopieren</button>
     </div>
 
     <div class="card">
@@ -199,10 +256,7 @@
         <div class="table-responsive" id="tableContainer">
             <div style="padding: 10px;" class="empty-state">Lade eine Datei hoch, um die Tabelle zu sehen...</div>
         </div>
-        <button id="downloadCsvBtn" class="btn" style="display: none;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            CSV Herunterladen
-        </button>
+        <button id="downloadCsvBtn" class="btn" style="display: none;">CSV Herunterladen</button>
     </div>
 
     <script>
@@ -260,31 +314,184 @@
             }
             container.innerHTML = html;
 
-            const horseContainer = document.getElementById('horseCheckboxesContainer');
-            let horseHtml = '';
-            currentData.besitzer.forEach((besitzer, bIndex) => {
-                besitzer.pferde.forEach((pferd, pIndex) => {
-                    if (pferd.stallgasse) {
-                        const isChecked = pferd.neu ? 'checked' : '';
-                        horseHtml += `
-                            <label class="horse-checkbox-item">
-                                <input type="checkbox" class="horse-neu-checkbox" data-bindex="${bIndex}" data-pindex="${pIndex}" ${isChecked}>
-                                <span><strong>${pferd.name}</strong> <small>(${besitzer.name})</small></span>
-                            </label>
-                        `;
-                    }
-                });
-            });
-            horseContainer.innerHTML = horseHtml;
+            updatePaddockSelect();
+            renderHorseList();
             card.style.display = 'block';
 
             container.querySelectorAll('input[type="number"][data-ort]').forEach(input => {
                 input.addEventListener('input', triggerLiveCalc);
             });
+        }
+
+        function updatePaddockSelect(selectedPaddock = '') {
+            const select = document.getElementById('new_paddock_select');
+            let optionsHtml = '';
+            
+            // NUR Paddocks anzeigen, "Stallgasse" wird ignoriert
+            for (const ort of Object.keys(currentData.verteilung)) {
+                if (ort.toLowerCase() === 'stallgasse') continue;
+                const sel = (ort === selectedPaddock) ? 'selected' : '';
+                optionsHtml += `<option value="${ort}" ${sel}>${ort}</option>`;
+            }
+            optionsHtml += `<option value="__NEW__">➕ Neuer Paddock anlegen...</option>`;
+            select.innerHTML = optionsHtml;
+
+            select.onchange = function() {
+                const customInput = document.getElementById('new_paddock_custom');
+                if (this.value === '__NEW__') {
+                    customInput.style.display = 'block';
+                    customInput.focus();
+                } else {
+                    customInput.style.display = 'none';
+                    customInput.value = '';
+                }
+            };
+        }
+
+        function renderHorseList() {
+            const horseContainer = document.getElementById('horseCheckboxesContainer');
+            let horseHtml = '';
+            currentData.besitzer.forEach((besitzer, bIndex) => {
+                besitzer.pferde.forEach((pferd, pIndex) => {
+                    const isChecked = pferd.neu ? 'checked' : '';
+                    const stallInfo = pferd.stallgasse ? 'Stallgasse' : 'Nur Paddock';
+                    horseHtml += `
+                        <div class="horse-checkbox-item">
+                            <div>
+                                <input type="checkbox" class="horse-neu-checkbox" data-bindex="${bIndex}" data-pindex="${pIndex}" ${isChecked}>
+                                <span><strong>${pferd.name}</strong> <small>(${besitzer.name} - ${stallInfo}, ${pferd.paddock})</small></span>
+                            </div>
+                            <div class="btn-action-group">
+                                <button type="button" class="btn-edit" onclick="editPferd(${bIndex}, ${pIndex})">Ändern</button>
+                                <button type="button" class="btn-delete" onclick="deletePferd(${bIndex}, ${pIndex})">Löschen</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+            horseContainer.innerHTML = horseHtml;
+
             horseContainer.querySelectorAll('.horse-neu-checkbox').forEach(chk => {
                 chk.addEventListener('change', triggerLiveCalc);
             });
         }
+
+        window.deletePferd = function(bIndex, pIndex) {
+            if (!confirm("Möchtest du dieses Pferd wirklich löschen?")) return;
+            currentData.besitzer[bIndex].pferde.splice(pIndex, 1);
+            if (currentData.besitzer[bIndex].pferde.length === 0) {
+                currentData.besitzer.splice(bIndex, 1);
+            }
+            renderSettings();
+            triggerLiveCalc();
+        };
+
+        window.editPferd = function(bIndex, pIndex) {
+            const besitzer = currentData.besitzer[bIndex];
+            const pferd = besitzer.pferde[pIndex];
+
+            document.getElementById('edit_b_index').value = bIndex;
+            document.getElementById('edit_p_index').value = pIndex;
+
+            document.getElementById('new_besitzer').value = besitzer.name;
+            document.getElementById('new_pferd').value = pferd.name;
+            
+            updatePaddockSelect(pferd.paddock);
+            document.getElementById('new_paddock_custom').style.display = 'none';
+            document.getElementById('new_paddock_custom').value = '';
+
+            document.getElementById('new_stallgasse').checked = pferd.stallgasse;
+            document.getElementById('new_is_neu').checked = pferd.neu || false;
+
+            document.getElementById('formTitle').innerText = "✏️ Pferd bearbeiten";
+            document.getElementById('saveHorseBtn').innerText = "Änderungen speichern";
+            document.getElementById('cancelEditBtn').style.display = "block";
+            
+            document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+        };
+
+        document.getElementById('cancelEditBtn').addEventListener('click', function() {
+            resetForm();
+        });
+
+        function resetForm() {
+            document.getElementById('edit_b_index').value = "-1";
+            document.getElementById('edit_p_index').value = "-1";
+            document.getElementById('new_besitzer').value = '';
+            document.getElementById('new_pferd').value = '';
+            
+            updatePaddockSelect();
+            document.getElementById('new_paddock_custom').style.display = 'none';
+            document.getElementById('new_paddock_custom').value = '';
+
+            document.getElementById('new_stallgasse').checked = true;
+            document.getElementById('new_is_neu').checked = false;
+
+            document.getElementById('formTitle').innerText = "➕ Neues Pferd hinzufügen";
+            document.getElementById('saveHorseBtn').innerText = "Pferd hinzufügen";
+            document.getElementById('cancelEditBtn').style.display = "none";
+        }
+
+        document.getElementById('saveHorseBtn').addEventListener('click', function() {
+            if (!currentData) {
+                alert("Bitte lade erst eine JSON-Datei hoch!");
+                return;
+            }
+            const bName = document.getElementById('new_besitzer').value.trim();
+            const pName = document.getElementById('new_pferd').value.trim();
+            
+            let paddock = document.getElementById('new_paddock_select').value;
+            if (paddock === '__NEW__') {
+                paddock = document.getElementById('new_paddock_custom').value.trim();
+            }
+
+            const stallgasse = document.getElementById('new_stallgasse').checked;
+            const isNeu = document.getElementById('new_is_neu').checked;
+
+            const bIdx = parseInt(document.getElementById('edit_b_index').value);
+            const pIdx = parseInt(document.getElementById('edit_p_index').value);
+
+            if (!bName || !pName || !paddock) {
+                alert("Bitte fülle Besitzer, Pferdename und Paddock aus.");
+                return;
+            }
+
+            if (!currentData.verteilung[paddock]) {
+                currentData.verteilung[paddock] = 1;
+            }
+
+            if (bIdx > -1 && pIdx > -1) {
+                const oldBesitzer = currentData.besitzer[bIdx];
+                oldBesitzer.pferde.splice(pIdx, 1);
+                if (oldBesitzer.pferde.length === 0) {
+                    currentData.besitzer.splice(bIdx, 1);
+                }
+
+                let besitzerObj = currentData.besitzer.find(b => b.name.toLowerCase() === bName.toLowerCase());
+                if (besitzerObj) {
+                    besitzerObj.pferde.push({ name: pName, stallgasse: stallgasse, paddock: paddock, neu: isNeu });
+                } else {
+                    currentData.besitzer.push({
+                        name: bName,
+                        pferde: [{ name: pName, stallgasse: stallgasse, paddock: paddock, neu: isNeu }]
+                    });
+                }
+            } else {
+                let besitzerObj = currentData.besitzer.find(b => b.name.toLowerCase() === bName.toLowerCase());
+                if (besitzerObj) {
+                    besitzerObj.pferde.push({ name: pName, stallgasse: stallgasse, paddock: paddock, neu: isNeu });
+                } else {
+                    currentData.besitzer.push({
+                        name: bName,
+                        pferde: [{ name: pName, stallgasse: stallgasse, paddock: paddock, neu: isNeu }]
+                    });
+                }
+            }
+
+            resetForm();
+            renderSettings();
+            triggerLiveCalc();
+        });
 
         function triggerLiveCalc() {
             if (!currentData) return;
@@ -310,6 +517,17 @@
 
             berechne(currentData);
         }
+
+        document.getElementById('downloadJsonBtn').addEventListener('click', function() {
+            if (!currentData) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentData, null, 2));
+            const a = document.createElement('a');
+            a.href = dataStr;
+            a.download = "daten.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
 
         document.getElementById('copyChatBtn').addEventListener('click', function() {
             const text = document.getElementById('chatOutput').value;
@@ -378,39 +596,28 @@
 
             const paddockKostenProPferd = {};
             for (const [paddockName, ballen] of Object.entries(data.verteilung)) {
-                if (paddockName === "Stallgasse") continue;
+                if (paddockName.toLowerCase() === "stallgasse") continue;
                 const kosten = ballen * data.preisProBallen;
                 const anzahlPferde = paddockPferdeCount[paddockName] || 0;
                 paddockKostenProPferd[paddockName] = anzahlPferde > 0 ? (kosten / anzahlPferde) : 0;
             }
 
-            // KORRIGIERTE NACHVERRECHNUNG (ANTEILIGE DIFFERENZ)
             let altGesamtwert = 0;
             let anteilAltPferd = 0;
             let anteilNeuPferd = 0;
             let diffGutschriftAlt = 0;
-            let diffNachzahlungNeu = 0;
 
             if (data.nachverrechnung && data.nachverrechnung.menge > 0 && stallgassePferdeList.length > 0) {
                 altGesamtwert = data.nachverrechnung.menge * data.nachverrechnung.preis;
-                
                 const anzahlAltPferde = altePferdeList.length;
                 const anzahlNeuPferde = neuePferdeList.length;
-                const gesamtStallgasseAnzahl = stallgassePferdeList.length; // z.B. 10 (9 alte + 1 neues)
+                const gesamtStallgasseAnzahl = stallgassePferdeList.length;
 
                 if (anzahlAltPferde > 0 && anzahlNeuPferde > 0) {
-                    // Wäre es vorher aufgeteilt worden: Gesamtwert / alte Anzahl (z.B. 120 / 9 = 13.33)
                     anteilAltPferd = altGesamtwert / anzahlAltPferde;
-                    // Wird es jetzt aufgeteilt: Gesamtwert / neue Gesamtzahl (z.B. 120 / 10 = 12.00)
                     anteilNeuPferd = altGesamtwert / gesamtStallgasseAnzahl;
-
-                    // Die Differenz, die alte gespart haben / neue bezahlen müssen
-                    diffGutschriftAlt = anteilAltPferd - anteilNeuPferd; // z.B. 13.33 - 12.00 = 1.33 Gutschrift
-                    diffNachzahlungNeu = (anteilAltPferd - anteilNeuPferd) * (anzahlAltPferde / anzahlNeuPferde); 
-                    // Alternativ zahlt das neue Pferd den vollen Anteil (anteilNeuPferd) oder trägt den Ausgleich. 
-                    // Exakt nach deiner Logik: Das neue Pferd zahlt seinen Anteil am Alt-Heu, und die alten kriegen die Differenz erlassen.
+                    diffGutschriftAlt = anteilAltPferd - anteilNeuPferd;
                 } else if (anzahlAltPferde === 0 && anzahlNeuPferde > 0) {
-                    // Falls nur neue da sind
                     anteilNeuPferd = altGesamtwert / gesamtStallgasseAnzahl;
                 }
             }
@@ -428,7 +635,7 @@
             chatText += `🌾 Gesamtballen (aktuell): ${totalBallen} Stück\n`;
             chatText += `📍 Verteilung:\n${verteilungText}\n`;
 
-            if (data.nachverrechnung && data.nachverrechnung.menge > 0) {
+            if (data.nachverrechnung && data.nachverrechnung.menge > 0 && neuePferdeList.length > 0) {
                 chatText += `🔄 *Nachverrechnung Alt-Heu (${data.nachverrechnung.menge} Ballen à ${data.nachverrechnung.preis.toFixed(2)}€ = ${altGesamtwert.toFixed(2)}€):*\n`;
                 chatText += `  • Neu aufgeteilt auf ${stallgassePferdeList.length} Pferde (${anteilNeuPferd.toFixed(2)}€ statt vorher ${anteilAltPferd.toFixed(2)}€ pro Alt-Pferd)\n`;
                 chatText += `  • Gutschrift für ${altePferdeList.length} Bestands-Pferd(e): -${diffGutschriftAlt.toFixed(2)}€ p.P.\n`;
@@ -472,12 +679,10 @@
                     let pferdAltDiff = 0;
                     if (pferd.stallgasse && data.nachverrechnung && data.nachverrechnung.menge > 0) {
                         if (pferd.neu) {
-                            // Neues Pferd zahlt seinen gerechten Anteil am Alt-Heu
                             pferdAltDiff = anteilNeuPferd;
                             pferdTotal += pferdAltDiff;
                             teile.push(`Alt-Heu Anteil: +${pferdAltDiff.toFixed(2)}€`);
-                        } else {
-                            // Altes Pferd bekommt die Ersparnis/Differenz gutgeschrieben
+                        } else if (neuePferdeList.length > 0) {
                             pferdAltDiff = -diffGutschriftAlt;
                             pferdTotal += pferdAltDiff;
                             teile.push(`Alt-Heu Gutschrift: -${Math.abs(pferdAltDiff).toFixed(2)}€`);
