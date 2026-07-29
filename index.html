@@ -384,7 +384,7 @@
             }
             renderSettings();
             triggerLiveCalc();
-        };
+        }
 
         window.editPferd = function(bIndex, pIndex) {
             const besitzer = currentData.besitzer[bIndex];
@@ -408,7 +408,7 @@
             document.getElementById('cancelEditBtn').style.display = "block";
             
             document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
-        };
+        }
 
         document.getElementById('cancelEditBtn').addEventListener('click', function() {
             resetForm();
@@ -739,8 +739,9 @@
                 });
             });
 
-            // Kontrollrechnung Soll = Anfahrt + (Gesamtballen * Basispreis) + Alt-Heu Gesamtwert (ohne Anfahrt)
-            let expectedTotal = round2(data.anfahrtKosten + (totalBallen * data.preisProBallen) + altGesamtwert);
+            // Kontrollrechnung Soll = Anfahrt + (Gesamtballen * Basispreis) 
+            // Alt-Heu wird weggelassen, da es ein Nullsummenspiel zwischen den Besitzern ist.
+            let expectedTotal = round2(data.anfahrtKosten + (totalBallen * data.preisProBallen));
             let diffTotal = round2(grandTotal - expectedTotal);
 
             tableHTML += `
@@ -750,7 +751,7 @@
                         <td style="font-weight: bold; border-left: none;">${grandTotal.toFixed(2)} €</td>
                     </tr>
                     <tr style="background-color: #f9f9f9; color: #666;">
-                        <td colspan="7" style="text-align: right; font-size: 13px; border-right: none;">Kontrolle (Soll: Anfahrt + aktuelle Ballen + Alt-Heu):</td>
+                        <td colspan="7" style="text-align: right; font-size: 13px; border-right: none;">Kontrolle (Soll-Summe aus Anfahrt + aktuelle Ballen):</td>
                         <td style="font-size: 13px; border-left: none;">${expectedTotal.toFixed(2)} € <br><small>(Rundungs-Diff: ${diffTotal.toFixed(2)} €)</small></td>
                     </tr>
                 </tfoot>
