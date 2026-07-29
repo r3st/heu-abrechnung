@@ -182,7 +182,7 @@
         
         <div class="settings-grid" style="margin-bottom: 20px;">
             <div class="setting-group">
-                <label for="edit_preis">Preis aktueller Ballen (€):</label>
+                <label for="edit_preis">Preis pro Ballen (€):</label>
                 <input type="number" step="0.50" id="edit_preis">
             </div>
             <div class="setting-group">
@@ -221,11 +221,8 @@
             <input type="text" id="new_besitzer" placeholder="Besitzer Name (z.B. Besitzer 13)">
             <input type="text" id="new_pferd" placeholder="Pferd Name (z.B. Pferd O)">
             
-            <!-- PADDOCK AUSWAHL / NEU ANLEGEN -->
             <label for="new_paddock_select" style="font-weight:bold; font-size:14px; margin-bottom:5px; display:block;">Paddock auswählen:</label>
-            <select id="new_paddock_select">
-                <!-- Wird dynamisch gefüllt -->
-            </select>
+            <select id="new_paddock_select"></select>
             <input type="text" id="new_paddock_custom" placeholder="Namen für neuen Paddock eingeben..." style="display: none;">
 
             <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; margin-bottom: 15px;">
@@ -583,25 +580,36 @@
                 });
             });
 
-            const anfahrtProPferd = totalPferde > 0 ? round2(data.anfahrtKosten / totalPferde) : 0;
-            const stallgasseKosten = (data.verteilung["Stallgasse"] || 0) * data.preisProBallen;
+            // 1. Gesamtzahl Ballen ermitteln
+            let totalBallen = 0;
+            for (const ballen of Object.values(data.verteilung)) {
+                totalBallen += ballen;
+            }
+
+            // 2. Anfahrt auf die Ballen umlegen (Erhöht den effektiven Preis pro Ballen)
+            let anfahrtProBallen = totalBallen > 0 ? round2(data.anfahrtKosten / totalBallen) : 0;
+            let effektiverBallenPreis = round2(data.preisProBallen + anfahrtProBallen);
+
+            // 3. Kosten pro Einheit (jetzt mit eff. Ballenpreis basierend auf Basis-Preis + Anfahrt-Anteil)
+            const stallgasseKosten = (data.verteilung["Stallgasse"] || 0) * effektiverBallenPreis;
             const stallgasseProPferd = stallgassePferdeList.length > 0 ? round2(stallgasseKosten / stallgassePferdeList.length) : 0;
 
             const paddockKostenProPferd = {};
             for (const [paddockName, ballen] of Object.entries(data.verteilung)) {
                 if (paddockName.toLowerCase() === "stallgasse") continue;
-                const kosten = ballen * data.preisProBallen;
+                const kosten = ballen * effektiverBallenPreis;
                 const anzahlPferde = paddockPferdeCount[paddockName] || 0;
                 paddockKostenProPferd[paddockName] = anzahlPferde > 0 ? round2(kosten / anzahlPferde) : 0;
             }
 
+            // 4. Alt-Heu Logik (nutzt ebenfalls den effektiven Ballenpreis)
             let altGesamtwert = 0;
             let anteilAltPferd = 0;
             let anteilNeuPferd = 0;
             let diffGutschriftAlt = 0;
 
             if (data.nachverrechnung && data.nachverrechnung.menge > 0 && stallgassePferdeList.length > 0) {
-                altGesamtwert = data.nachverrechnung.menge * data.nachverrechnung.preis;
+                altGesamtwert = data.nachverrechnung.menge * effektiverBallenPreis;
                 const anzahlAltPferde = altePferdeList.length;
                 const anzahlNeuPferde = neuePferdeList.length;
                 const gesamtStallgasseAnzahl = stallgassePferdeList.length;
@@ -615,35 +623,33 @@
                 }
             }
 
-            let totalBallen = 0;
             let verteilungText = "";
             for (const [ort, ballen] of Object.entries(data.verteilung)) {
-                totalBallen += ballen;
                 verteilungText += `  • ${ort}: ${ballen} Ballen\n`;
             }
 
-            // WhatsApp Text ohne Kontrollsumme
+            // WhatsApp Text mit Anfahrt-Umlage auf Ballen
             let chatText = `🌾 *Heu-Abrechnung*\n\n`;
-            chatText += `🚚 Anfahrt gesamt: ${data.anfahrtKosten.toFixed(2)}€ (${anfahrtProPferd.toFixed(2)}€ pro Pferd)\n`;
-            chatText += `📦 Ballenpreis (aktuell): ${data.preisProBallen.toFixed(2)}€\n`;
-            chatText += `🌾 Gesamtballen (aktuell): ${totalBallen} Stück\n`;
+            chatText += `📦 Basis-Ballenpreis: ${data.preisProBallen.toFixed(2)}€\n`;
+            chatText += `🚚 Anfahrt (${data.anfahrtKosten.toFixed(2)}€) umgelegt auf ${totalBallen} Ballen (+${anfahrtProBallen.toFixed(2)}€ pro Ballen)\n`;
+            chatText += `👉 *Effektiver Ballenpreis: ${effektiverBallenPreis.toFixed(2)}€*\n`;
+            chatText += `🌾 Gesamtballen: ${totalBallen} Stück\n`;
             chatText += `📍 Verteilung:\n${verteilungText}\n`;
 
             if (data.nachverrechnung && data.nachverrechnung.menge > 0 && neuePferdeList.length > 0) {
-                chatText += `🔄 *Nachverrechnung Alt-Heu (${data.nachverrechnung.menge} Ballen à ${data.nachverrechnung.preis.toFixed(2)}€ = ${altGesamtwert.toFixed(2)}€):*\n`;
+                chatText += `🔄 *Nachverrechnung Alt-Heu (${data.nachverrechnung.menge} Ballen à ${effektiverBallenPreis.toFixed(2)}€ = ${altGesamtwert.toFixed(2)}€):*\n`;
                 chatText += `  • Neu aufgeteilt auf ${stallgassePferdeList.length} Pferde (${anteilNeuPferd.toFixed(2)}€ pro Pferd)\n`;
                 chatText += `  • Gutschrift für ${altePferdeList.length} Bestands-Pferd(e): -${diffGutschriftAlt.toFixed(2)}€ p.P.\n`;
                 chatText += `  • Anteil für ${neuePferdeList.length} neue Pferd(e): +${anteilNeuPferd.toFixed(2)}€ p.P.\n\n`;
             }
 
-            let csvText = `Besitzer;Pferd;Anfahrt (€);Stallgasse (€);Paddock Name;Paddock (€);Alt-Heu Ausgleich (€);Gesamt Pferd (€);Gesamt Besitzer (€)\n`;
+            let csvText = `Besitzer;Pferd;Stallgasse (€);Paddock Name;Paddock (€);Alt-Heu Ausgleich (€);Gesamt Pferd (€);Gesamt Besitzer (€)\n`;
             
             let tableHTML = `<table>
                 <thead>
                     <tr>
                         <th>Besitzer</th>
                         <th>Pferd</th>
-                        <th>Anfahrt (€)</th>
                         <th>Stallgasse (€)</th>
                         <th>Paddock</th>
                         <th>Paddock (€)</th>
@@ -662,8 +668,8 @@
                 let besitzerZeilenDaten = [];
 
                 besitzer.pferde.forEach(pferd => {
-                    let pferdTotal = anfahrtProPferd;
-                    let teile = [`Anfahrt: ${anfahrtProPferd.toFixed(2)}€`];
+                    let pferdTotal = 0;
+                    let teile = [];
                     
                     let pferdStallKosten = 0;
                     if (pferd.stallgasse) {
@@ -698,7 +704,6 @@
                     besitzerZeilenDaten.push({
                         besitzerName: besitzer.name,
                         pferdName: pferd.name,
-                        anfahrt: anfahrtProPferd.toFixed(2),
                         stallgasse: pferdStallKosten.toFixed(2),
                         paddockName: pferd.paddock || '-',
                         paddockKosten: pferdPaddockKosten.toFixed(2),
@@ -716,13 +721,12 @@
                     let rowSpan = istErsteZeile ? ` rowspan="${besitzerZeilenDaten.length}" style="vertical-align: top; font-weight: bold;"` : '';
                     let formatBesitzerTotal = istErsteZeile ? besitzerTotal.toFixed(2) : "";
 
-                    csvText += `${z.besitzerName};${z.pferdName};${z.anfahrt};${z.stallgasse};${z.paddockName};${z.paddockKosten};${z.altDiff};${z.pferdTotal};${formatBesitzerTotal}\n`;
+                    csvText += `${z.besitzerName};${z.pferdName};${z.stallgasse};${z.paddockName};${z.paddockKosten};${z.altDiff};${z.pferdTotal};${formatBesitzerTotal}\n`;
 
                     tableHTML += `<tr>`;
                     if (istErsteZeile) tableHTML += `<td${rowSpan}>${z.besitzerName}</td>`;
                     tableHTML += `
                         <td>${z.pferdName}</td>
-                        <td>${z.anfahrt}</td>
                         <td>${z.stallgasse}</td>
                         <td>${z.paddockName}</td>
                         <td>${z.paddockKosten}</td>
@@ -734,26 +738,26 @@
                 });
             });
 
-            // Kontrollrechnung für Tabelle & CSV behalten
+            // Kontrollrechnung (Soll = Anfahrt + (Gesamtballen * Basis-Ballenpreis))
             let expectedTotal = round2(data.anfahrtKosten + (totalBallen * data.preisProBallen));
             let diffTotal = round2(grandTotal - expectedTotal);
 
             tableHTML += `
                 <tfoot>
                     <tr style="background-color: #e8f4f8; color: #2c3e50;">
-                        <td colspan="8" style="text-align: right; font-weight: bold; border-right: none;">Gesamtsumme aller Besitzer:</td>
+                        <td colspan="7" style="text-align: right; font-weight: bold; border-right: none;">Gesamtsumme aller Besitzer:</td>
                         <td style="font-weight: bold; border-left: none;">${grandTotal.toFixed(2)} €</td>
                     </tr>
                     <tr style="background-color: #f9f9f9; color: #666;">
-                        <td colspan="8" style="text-align: right; font-size: 13px; border-right: none;">Kontrolle (Soll-Summe aus Anfahrt + aktuelle Ballen):</td>
+                        <td colspan="7" style="text-align: right; font-size: 13px; border-right: none;">Kontrolle (Soll-Summe aus Anfahrt + aktuelle Ballen):</td>
                         <td style="font-size: 13px; border-left: none;">${expectedTotal.toFixed(2)} € <br><small>(Rundungs-Diff: ${diffTotal.toFixed(2)} €)</small></td>
                     </tr>
                 </tfoot>
             </tbody></table>`;
 
-            csvText += `\n;;;;;;;Gesamtsumme aller Besitzer:;${grandTotal.toFixed(2)}\n`;
-            csvText += `;;;;;;;Kontrolle (Soll):;${expectedTotal.toFixed(2)}\n`;
-            csvText += `;;;;;;;Rundungsdifferenz:;${diffTotal.toFixed(2)}\n`;
+            csvText += `\n;;;;;;Gesamtsumme aller Besitzer:;${grandTotal.toFixed(2)}\n`;
+            csvText += `;;;;;;Kontrolle (Soll):;${expectedTotal.toFixed(2)}\n`;
+            csvText += `;;;;;;Rundungsdifferenz:;${diffTotal.toFixed(2)}\n`;
 
             document.getElementById('chatOutput').value = chatText;
             document.getElementById('tableContainer').innerHTML = tableHTML;
