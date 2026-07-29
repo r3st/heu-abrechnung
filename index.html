@@ -627,7 +627,9 @@
 
             let verteilungText = "";
             for (const [ort, ballen] of Object.entries(data.verteilung)) {
-                verteilungText += `  • ${ort}: ${ballen} Ballen\n`;
+                // NEU: Paddock Prefix im Text (außer bei Stallgasse)
+                let textOrt = (ort.toLowerCase() === "stallgasse") ? ort : `Paddock: ${ort}`;
+                verteilungText += `  • ${textOrt}: ${ballen} Ballen\n`;
             }
 
             let chatText = `🌾 *Heu-Abrechnung*\n\n`;
@@ -696,7 +698,10 @@
                     if (pferd.paddock && paddockKostenProPferd[pferd.paddock]) {
                         pferdPaddockKosten = paddockKostenProPferd[pferd.paddock];
                         pferdTotal = round2(pferdTotal + pferdPaddockKosten);
-                        teile.push(`${pferd.paddock}: ${pferdPaddockKosten.toFixed(2)}€`);
+                        
+                        // NEU: Paddock Prefix bei den Pferden im Chat-Text
+                        let textPaddock = (pferd.paddock.toLowerCase() === "stallgasse") ? pferd.paddock : `Paddock: ${pferd.paddock}`;
+                        teile.push(`${textPaddock}: ${pferdPaddockKosten.toFixed(2)}€`);
                     }
 
                     besitzerTotal = round2(besitzerTotal + pferdTotal);
