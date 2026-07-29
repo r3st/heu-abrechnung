@@ -586,11 +586,11 @@
                 totalBallen += ballen;
             }
 
-            // 2. Anfahrt auf die Ballen umlegen (Erhöht den effektiven Preis pro Ballen)
+            // 2. Anfahrt auf die aktuellen Heuballen umlegen
             let anfahrtProBallen = totalBallen > 0 ? round2(data.anfahrtKosten / totalBallen) : 0;
             let effektiverBallenPreis = round2(data.preisProBallen + anfahrtProBallen);
 
-            // 3. Kosten pro Einheit (jetzt mit eff. Ballenpreis basierend auf Basis-Preis + Anfahrt-Anteil)
+            // 3. Kosten pro Einheit (aktueller Heuballen inkl. Anfahrtsanteil)
             const stallgasseKosten = (data.verteilung["Stallgasse"] || 0) * effektiverBallenPreis;
             const stallgasseProPferd = stallgassePferdeList.length > 0 ? round2(stallgasseKosten / stallgassePferdeList.length) : 0;
 
@@ -602,14 +602,16 @@
                 paddockKostenProPferd[paddockName] = anzahlPferde > 0 ? round2(kosten / anzahlPferde) : 0;
             }
 
-            // 4. Alt-Heu Logik (nutzt ebenfalls den effektiven Ballenpreis)
+            // 4. Alt-Heu Nachverrechnung (OHNE Anfahrt, rein mit dem angegebenen Alt-Heu Preis)
             let altGesamtwert = 0;
             let anteilAltPferd = 0;
             let anteilNeuPferd = 0;
             let diffGutschriftAlt = 0;
 
+            const altPreisPur = data.nachverrechnung ? data.nachverrechnung.preis : 0;
+
             if (data.nachverrechnung && data.nachverrechnung.menge > 0 && stallgassePferdeList.length > 0) {
-                altGesamtwert = data.nachverrechnung.menge * effektiverBallenPreis;
+                altGesamtwert = data.nachverrechnung.menge * altPreisPur;
                 const anzahlAltPferde = altePferdeList.length;
                 const anzahlNeuPferde = neuePferdeList.length;
                 const gesamtStallgasseAnzahl = stallgassePferdeList.length;
@@ -628,7 +630,6 @@
                 verteilungText += `  • ${ort}: ${ballen} Ballen\n`;
             }
 
-            // WhatsApp Text mit Anfahrt-Umlage auf Ballen
             let chatText = `🌾 *Heu-Abrechnung*\n\n`;
             chatText += `📦 Basis-Ballenpreis: ${data.preisProBallen.toFixed(2)}€\n`;
             chatText += `🚚 Anfahrt (${data.anfahrtKosten.toFixed(2)}€) umgelegt auf ${totalBallen} Ballen (+${anfahrtProBallen.toFixed(2)}€ pro Ballen)\n`;
@@ -637,7 +638,7 @@
             chatText += `📍 Verteilung:\n${verteilungText}\n`;
 
             if (data.nachverrechnung && data.nachverrechnung.menge > 0 && neuePferdeList.length > 0) {
-                chatText += `🔄 *Nachverrechnung Alt-Heu (${data.nachverrechnung.menge} Ballen à ${effektiverBallenPreis.toFixed(2)}€ = ${altGesamtwert.toFixed(2)}€):*\n`;
+                chatText += `🔄 *Nachverrechnung Alt-Heu (${data.nachverrechnung.menge} Ballen à ${altPreisPur.toFixed(2)}€ o. Anfahrt = ${altGesamtwert.toFixed(2)}€):*\n`;
                 chatText += `  • Neu aufgeteilt auf ${stallgassePferdeList.length} Pferde (${anteilNeuPferd.toFixed(2)}€ pro Pferd)\n`;
                 chatText += `  • Gutschrift für ${altePferdeList.length} Bestands-Pferd(e): -${diffGutschriftAlt.toFixed(2)}€ p.P.\n`;
                 chatText += `  • Anteil für ${neuePferdeList.length} neue Pferd(e): +${anteilNeuPferd.toFixed(2)}€ p.P.\n\n`;
@@ -738,8 +739,8 @@
                 });
             });
 
-            // Kontrollrechnung (Soll = Anfahrt + (Gesamtballen * Basis-Ballenpreis))
-            let expectedTotal = round2(data.anfahrtKosten + (totalBallen * data.preisProBallen));
+            // Kontrollrechnung Soll = Anfahrt + (Gesamtballen * Basispreis) + Alt-Heu Gesamtwert (ohne Anfahrt)
+            let expectedTotal = round2(data.anfahrtKosten + (totalBallen * data.preisProBallen) + altGesamtwert);
             let diffTotal = round2(grandTotal - expectedTotal);
 
             tableHTML += `
@@ -749,7 +750,7 @@
                         <td style="font-weight: bold; border-left: none;">${grandTotal.toFixed(2)} €</td>
                     </tr>
                     <tr style="background-color: #f9f9f9; color: #666;">
-                        <td colspan="7" style="text-align: right; font-size: 13px; border-right: none;">Kontrolle (Soll-Summe aus Anfahrt + aktuelle Ballen):</td>
+                        <td colspan="7" style="text-align: right; font-size: 13px; border-right: none;">Kontrolle (Soll: Anfahrt + aktuelle Ballen + Alt-Heu):</td>
                         <td style="font-size: 13px; border-left: none;">${expectedTotal.toFixed(2)} € <br><small>(Rundungs-Diff: ${diffTotal.toFixed(2)} €)</small></td>
                     </tr>
                 </tfoot>
