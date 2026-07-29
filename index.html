@@ -221,7 +221,7 @@
             <input type="text" id="new_besitzer" placeholder="Besitzer Name (z.B. Besitzer 13)">
             <input type="text" id="new_pferd" placeholder="Pferd Name (z.B. Pferd O)">
             
-            <!-- PADDOCK AUSWAHL / NEU ANLEGEN (OHNE STALLGASSE) -->
+            <!-- PADDOCK AUSWAHL / NEU ANLEGEN -->
             <label for="new_paddock_select" style="font-weight:bold; font-size:14px; margin-bottom:5px; display:block;">Paddock auswählen:</label>
             <select id="new_paddock_select">
                 <!-- Wird dynamisch gefüllt -->
@@ -261,6 +261,10 @@
 
     <script>
         let currentData = null;
+
+        function round2(num) {
+            return Math.round((num + Number.EPSILON) * 100) / 100;
+        }
 
         document.getElementById('fileInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
@@ -327,7 +331,6 @@
             const select = document.getElementById('new_paddock_select');
             let optionsHtml = '';
             
-            // NUR Paddocks anzeigen, "Stallgasse" wird ignoriert
             for (const ort of Object.keys(currentData.verteilung)) {
                 if (ort.toLowerCase() === 'stallgasse') continue;
                 const sel = (ort === selectedPaddock) ? 'selected' : '';
@@ -466,26 +469,16 @@
                 if (oldBesitzer.pferde.length === 0) {
                     currentData.besitzer.splice(bIdx, 1);
                 }
-
-                let besitzerObj = currentData.besitzer.find(b => b.name.toLowerCase() === bName.toLowerCase());
-                if (besitzerObj) {
-                    besitzerObj.pferde.push({ name: pName, stallgasse: stallgasse, paddock: paddock, neu: isNeu });
-                } else {
-                    currentData.besitzer.push({
-                        name: bName,
-                        pferde: [{ name: pName, stallgasse: stallgasse, paddock: paddock, neu: isNeu }]
-                    });
-                }
+            }
+            
+            let besitzerObj = currentData.besitzer.find(b => b.name.toLowerCase() === bName.toLowerCase());
+            if (besitzerObj) {
+                besitzerObj.pferde.push({ name: pName, stallgasse: stallgasse, paddock: paddock, neu: isNeu });
             } else {
-                let besitzerObj = currentData.besitzer.find(b => b.name.toLowerCase() === bName.toLowerCase());
-                if (besitzerObj) {
-                    besitzerObj.pferde.push({ name: pName, stallgasse: stallgasse, paddock: paddock, neu: isNeu });
-                } else {
-                    currentData.besitzer.push({
-                        name: bName,
-                        pferde: [{ name: pName, stallgasse: stallgasse, paddock: paddock, neu: isNeu }]
-                    });
-                }
+                currentData.besitzer.push({
+                    name: bName,
+                    pferde: [{ name: pName, stallgasse: stallgasse, paddock: paddock, neu: isNeu }]
+                });
             }
 
             resetForm();
@@ -590,16 +583,16 @@
                 });
             });
 
-            const anfahrtProPferd = totalPferde > 0 ? (data.anfahrtKosten / totalPferde) : 0;
+            const anfahrtProPferd = totalPferde > 0 ? round2(data.anfahrtKosten / totalPferde) : 0;
             const stallgasseKosten = (data.verteilung["Stallgasse"] || 0) * data.preisProBallen;
-            const stallgasseProPferd = stallgassePferdeList.length > 0 ? (stallgasseKosten / stallgassePferdeList.length) : 0;
+            const stallgasseProPferd = stallgassePferdeList.length > 0 ? round2(stallgasseKosten / stallgassePferdeList.length) : 0;
 
             const paddockKostenProPferd = {};
             for (const [paddockName, ballen] of Object.entries(data.verteilung)) {
                 if (paddockName.toLowerCase() === "stallgasse") continue;
                 const kosten = ballen * data.preisProBallen;
                 const anzahlPferde = paddockPferdeCount[paddockName] || 0;
-                paddockKostenProPferd[paddockName] = anzahlPferde > 0 ? (kosten / anzahlPferde) : 0;
+                paddockKostenProPferd[paddockName] = anzahlPferde > 0 ? round2(kosten / anzahlPferde) : 0;
             }
 
             let altGesamtwert = 0;
@@ -615,10 +608,10 @@
 
                 if (anzahlAltPferde > 0 && anzahlNeuPferde > 0) {
                     anteilAltPferd = altGesamtwert / anzahlAltPferde;
-                    anteilNeuPferd = altGesamtwert / gesamtStallgasseAnzahl;
-                    diffGutschriftAlt = anteilAltPferd - anteilNeuPferd;
+                    anteilNeuPferd = round2(altGesamtwert / gesamtStallgasseAnzahl);
+                    diffGutschriftAlt = round2(anteilAltPferd - anteilNeuPferd);
                 } else if (anzahlAltPferde === 0 && anzahlNeuPferde > 0) {
-                    anteilNeuPferd = altGesamtwert / gesamtStallgasseAnzahl;
+                    anteilNeuPferd = round2(altGesamtwert / gesamtStallgasseAnzahl);
                 }
             }
 
@@ -629,6 +622,7 @@
                 verteilungText += `  • ${ort}: ${ballen} Ballen\n`;
             }
 
+            // WhatsApp Text ohne Kontrollsumme
             let chatText = `🌾 *Heu-Abrechnung*\n\n`;
             chatText += `🚚 Anfahrt gesamt: ${data.anfahrtKosten.toFixed(2)}€ (${anfahrtProPferd.toFixed(2)}€ pro Pferd)\n`;
             chatText += `📦 Ballenpreis (aktuell): ${data.preisProBallen.toFixed(2)}€\n`;
@@ -637,7 +631,7 @@
 
             if (data.nachverrechnung && data.nachverrechnung.menge > 0 && neuePferdeList.length > 0) {
                 chatText += `🔄 *Nachverrechnung Alt-Heu (${data.nachverrechnung.menge} Ballen à ${data.nachverrechnung.preis.toFixed(2)}€ = ${altGesamtwert.toFixed(2)}€):*\n`;
-                chatText += `  • Neu aufgeteilt auf ${stallgassePferdeList.length} Pferde (${anteilNeuPferd.toFixed(2)}€ statt vorher ${anteilAltPferd.toFixed(2)}€ pro Alt-Pferd)\n`;
+                chatText += `  • Neu aufgeteilt auf ${stallgassePferdeList.length} Pferde (${anteilNeuPferd.toFixed(2)}€ pro Pferd)\n`;
                 chatText += `  • Gutschrift für ${altePferdeList.length} Bestands-Pferd(e): -${diffGutschriftAlt.toFixed(2)}€ p.P.\n`;
                 chatText += `  • Anteil für ${neuePferdeList.length} neue Pferd(e): +${anteilNeuPferd.toFixed(2)}€ p.P.\n\n`;
             }
@@ -660,6 +654,8 @@
                 </thead>
                 <tbody>`;
 
+            let grandTotal = 0;
+
             data.besitzer.forEach(besitzer => {
                 let besitzerTotal = 0;
                 let besitzerChat = `👤 *${besitzer.name}*\n`;
@@ -671,20 +667,20 @@
                     
                     let pferdStallKosten = 0;
                     if (pferd.stallgasse) {
-                        pferdTotal += stallgasseProPferd;
                         pferdStallKosten = stallgasseProPferd;
-                        teile.push(`Stallgasse: ${stallgasseProPferd.toFixed(2)}€`);
+                        pferdTotal = round2(pferdTotal + pferdStallKosten);
+                        teile.push(`Stallgasse: ${pferdStallKosten.toFixed(2)}€`);
                     }
 
                     let pferdAltDiff = 0;
                     if (pferd.stallgasse && data.nachverrechnung && data.nachverrechnung.menge > 0) {
                         if (pferd.neu) {
                             pferdAltDiff = anteilNeuPferd;
-                            pferdTotal += pferdAltDiff;
+                            pferdTotal = round2(pferdTotal + pferdAltDiff);
                             teile.push(`Alt-Heu Anteil: +${pferdAltDiff.toFixed(2)}€`);
                         } else if (neuePferdeList.length > 0) {
                             pferdAltDiff = -diffGutschriftAlt;
-                            pferdTotal += pferdAltDiff;
+                            pferdTotal = round2(pferdTotal + pferdAltDiff);
                             teile.push(`Alt-Heu Gutschrift: -${Math.abs(pferdAltDiff).toFixed(2)}€`);
                         }
                     }
@@ -692,11 +688,11 @@
                     let pferdPaddockKosten = 0;
                     if (pferd.paddock && paddockKostenProPferd[pferd.paddock]) {
                         pferdPaddockKosten = paddockKostenProPferd[pferd.paddock];
-                        pferdTotal += pferdPaddockKosten;
+                        pferdTotal = round2(pferdTotal + pferdPaddockKosten);
                         teile.push(`${pferd.paddock}: ${pferdPaddockKosten.toFixed(2)}€`);
                     }
 
-                    besitzerTotal += pferdTotal;
+                    besitzerTotal = round2(besitzerTotal + pferdTotal);
                     besitzerChat += `  🐴 ${pferd.name}: ${pferdTotal.toFixed(2)}€ (${teile.join(' + ')})\n`;
                     
                     besitzerZeilenDaten.push({
@@ -711,6 +707,7 @@
                     });
                 });
 
+                grandTotal = round2(grandTotal + besitzerTotal);
                 besitzerChat = besitzerChat.replace(`\n`, ` -> *Gesamt: ${besitzerTotal.toFixed(2)}€*\n`);
                 chatText += besitzerChat + `\n`;
 
@@ -737,7 +734,26 @@
                 });
             });
 
-            tableHTML += `</tbody></table>`;
+            // Kontrollrechnung für Tabelle & CSV behalten
+            let expectedTotal = round2(data.anfahrtKosten + (totalBallen * data.preisProBallen));
+            let diffTotal = round2(grandTotal - expectedTotal);
+
+            tableHTML += `
+                <tfoot>
+                    <tr style="background-color: #e8f4f8; color: #2c3e50;">
+                        <td colspan="8" style="text-align: right; font-weight: bold; border-right: none;">Gesamtsumme aller Besitzer:</td>
+                        <td style="font-weight: bold; border-left: none;">${grandTotal.toFixed(2)} €</td>
+                    </tr>
+                    <tr style="background-color: #f9f9f9; color: #666;">
+                        <td colspan="8" style="text-align: right; font-size: 13px; border-right: none;">Kontrolle (Soll-Summe aus Anfahrt + aktuelle Ballen):</td>
+                        <td style="font-size: 13px; border-left: none;">${expectedTotal.toFixed(2)} € <br><small>(Rundungs-Diff: ${diffTotal.toFixed(2)} €)</small></td>
+                    </tr>
+                </tfoot>
+            </tbody></table>`;
+
+            csvText += `\n;;;;;;;Gesamtsumme aller Besitzer:;${grandTotal.toFixed(2)}\n`;
+            csvText += `;;;;;;;Kontrolle (Soll):;${expectedTotal.toFixed(2)}\n`;
+            csvText += `;;;;;;;Rundungsdifferenz:;${diffTotal.toFixed(2)}\n`;
 
             document.getElementById('chatOutput').value = chatText;
             document.getElementById('tableContainer').innerHTML = tableHTML;
